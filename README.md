@@ -5,7 +5,7 @@ Neural Network Go is a project built from scratch in Go (Golang) that demonstrat
 ## Functionality
 
 - Forward Propagation [Implemented]
-- Backpropagation [Not Yet Implemented]
+- Backward Propagation [Implemented]
 - Training on Sample Datasets [Implemented]
 
 ## Table of Contents
