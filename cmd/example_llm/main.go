@@ -47,16 +47,16 @@ func GenerateModel(filePath string) (*brain.NeuralNet, brain.Metadata) {
 
 	But Leo's journey was far from over. The stone's awakening had also stirred an ancient force that sought to disrupt the balance of nature. Armed with his newfound abilities and the wisdom imparted by Elias, Leo vowed to protect his village and the world beyond from this looming threat. He returned to the village, not as the curious boy he once was, but as a protector, ready to face whatever challenges lay ahead.Once upon a time in a small village nestled between rolling hills, there lived a curious young boy named Leo. Leo loved exploring the woods, climbing trees, and discovering hidden treasures. One day, while wandering deeper into the forest than ever before, he stumbled upon a mysterious glowing stone. The stone seemed to hum with energy, and as Leo picked it up, he felt a surge of warmth and power course through him. Little did he know, this stone was the key to an ancient secret that would change his life forever. As the days passed, strange things began to happen in the village. Crops grew faster, animals behaved unusually, and the weather seemed to follow Leo's emotions. The villagers started to notice and whispered among themselves about the boy with the glowing stone. Meanwhile, Leo was determined to uncover the truth behind the stone's power. He spent hours reading old books in the village library and talking to the elders, piecing together fragments of a forgotten legend. The legend spoke of a guardian chosen to protect the balance of nature, and Leo began to realize that he might be that guardian. But with great power came great responsibility, and Leo knew he had to learn to control the stone's energy before it was too late. As he embarked on this journey of self-discovery, he encountered challenges, made new friends, and uncovered the true meaning of courage and friendship.`
 
-	contextSize := 3
+	contextSize := 6
 
 	// Step 1: Prepare dataset
 	samples, vocab, reverse := PrepareTrainingPairs(text, contextSize)
 
 	// Step 2: Create network
 	inputSize := len(vocab) * contextSize
-	hiddenSize := 64
+	hiddenSize := 256
 	outputSize := len(vocab)
-	learningRate := 0.1
+	learningRate := 0.01
 	nn := brain.NewNeuralNet(inputSize, hiddenSize, outputSize, learningRate) // 64 hidden neurons
 
 	metadata := brain.Metadata{
@@ -77,7 +77,7 @@ func GenerateModel(filePath string) (*brain.NeuralNet, brain.Metadata) {
 	beforeTraining := time.Now()
 	fmt.Printf("\rTraining Progress: 0.00%% [0s]")
 	progress := 0.0
-	epochMax := 100
+	epochMax := 100000
 	for epoch := 0; epoch < epochMax; epoch++ {
 		for _, sample := range samples {
 			nn.Train(sample.Input, sample.Target)

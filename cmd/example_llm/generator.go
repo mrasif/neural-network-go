@@ -8,7 +8,7 @@ import (
 	"github.com/mrasif/neural-network-go/brain"
 )
 
-// // Decode a one-hot output to the predicted character
+// Decode a one-hot output to the predicted character
 // func DecodeOneHot(output []float64, reverse map[int]rune) rune {
 // 	maxVal := -1.0
 // 	maxIdx := -1
