@@ -1,7 +1,6 @@
 package example_llm
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"time"
@@ -9,48 +8,31 @@ import (
 	"github.com/mrasif/neural-network-go/brain"
 )
 
-type Metadata struct {
-	ContextSize int
-	Vocab       map[rune]int
-	Reverse     map[int]rune
-	ParamSize   int
-}
-
 func Test() {
 	filePath := "./model.bin"
 	// nn, metadata := GenerateModel(filePath)
 	nn, metadata := LoadModel(filePath)
 
+	printModelInfo(metadata.ModelInfo)
+
 	// metadata.ContextSize = 3
 
 	// Step 4: Generate text
-	seed := "Onc"
+	seed := "Once upon"
 	generated := GenerateText(nn, seed, 100, metadata.ContextSize, metadata.Vocab, metadata.Reverse)
 	fmt.Println("Generated:", generated)
 }
 
-func LoadModel(filePath string) (*brain.NeuralNet, Metadata) {
-	nn, rawMeta, err := brain.LoadNeuralNet(filePath)
+func LoadModel(filePath string) (*brain.NeuralNet, brain.Metadata) {
+	nn, metadata, err := brain.LoadNeuralNet(filePath)
 	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Convert map[string]interface{} to JSON
-	metaBytes, err := json.Marshal(rawMeta)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Decode JSON into strongly typed Metadata struct
-	var metadata Metadata
-	if err := json.Unmarshal(metaBytes, &metadata); err != nil {
 		log.Fatal(err)
 	}
 
 	return nn, metadata
 }
 
-func GenerateModel(filePath string) (*brain.NeuralNet, Metadata) {
+func GenerateModel(filePath string) (*brain.NeuralNet, brain.Metadata) {
 	text := `Once upon a time in a small village nestled between rolling hills, there lived a curious young boy named Leo. Leo loved exploring the woods, climbing trees, and discovering hidden treasures. The village was a peaceful place, where everyone knew each other, and life moved at a gentle pace. However, Leo's insatiable curiosity often led him to places others dared not venture. One day, while wandering deeper into the forest than ever before, he stumbled upon a mysterious glowing stone. The stone seemed to hum with energy, and as Leo picked it up, he felt a surge of warmth and power course through him. Little did he know, this stone was the key to an ancient secret that would change his life forever.
 
 	As the days passed, strange things began to happen in the village. Crops grew faster, animals behaved unusually, and the weather seemed to follow Leo's emotions. The villagers started to notice and whispered among themselves about the boy with the glowing stone. Some were in awe, believing it to be a blessing, while others grew fearful, suspecting it might bring misfortune. Meanwhile, Leo was determined to uncover the truth behind the stone's power. He spent hours reading old books in the village library and talking to the elders, piecing together fragments of a forgotten legend.
@@ -77,11 +59,25 @@ func GenerateModel(filePath string) (*brain.NeuralNet, Metadata) {
 	learningRate := 0.1
 	nn := brain.NewNeuralNet(inputSize, hiddenSize, outputSize, learningRate) // 64 hidden neurons
 
+	metadata := brain.Metadata{
+		ContextSize: contextSize,
+		Vocab:       vocab,
+		Reverse:     reverse,
+		ModelInfo: brain.ModelInfo{
+			Name:       "storybook",
+			InputSize:  inputSize,
+			HiddenSize: hiddenSize,
+			OutputSize: outputSize,
+			CreatedAt:  time.Now(),
+		},
+	}
+	printModelInfo(metadata.ModelInfo)
+
 	// Step 3: Train
 	beforeTraining := time.Now()
 	fmt.Printf("\rTraining Progress: 0.00%% [0s]")
 	progress := 0.0
-	epochMax := 50000
+	epochMax := 100
 	for epoch := 0; epoch < epochMax; epoch++ {
 		for _, sample := range samples {
 			nn.Train(sample.Input, sample.Target)
@@ -91,21 +87,11 @@ func GenerateModel(filePath string) (*brain.NeuralNet, Metadata) {
 	}
 	fmt.Printf("\rTraining Progress: 100.00%% [%s]\n", formatDuration(time.Since(beforeTraining).Seconds())) // Final update + newline
 
-	// 🧠 Print number of parameters
-	totalParams := inputSize*hiddenSize + hiddenSize + hiddenSize*outputSize + outputSize
-	fmt.Println("Model Architecture:")
-	fmt.Println("  Input Size :", inputSize)
-	fmt.Println("  Hidden Size:", hiddenSize)
-	fmt.Println("  Output Size:", outputSize)
-	fmt.Println("  Total Parameters:", totalParams)
+	// Print number of parameters
+	metadata.ModelInfo.TrainingTime = time.Since(beforeTraining).Seconds()
+	metadata.ModelInfo.UpdatedAt = time.Now()
 
 	// Preparing to save model
-	metadata := Metadata{
-		ContextSize: contextSize,
-		Vocab:       vocab,
-		Reverse:     reverse,
-		ParamSize:   totalParams,
-	}
 	err := nn.Save(filePath, metadata)
 	if err != nil {
 		fmt.Println("Error saving model:", err)
@@ -125,4 +111,16 @@ func formatDuration(seconds float64) string {
 		return fmt.Sprintf("%dm %ds", minutes, remainingSeconds)
 	}
 	return fmt.Sprintf("%ds", remainingSeconds)
+}
+
+func printModelInfo(modelInfo brain.ModelInfo) {
+	fmt.Println("Model Architecture:")
+	fmt.Println("  Name:", modelInfo.Name)
+	fmt.Println("  Input Size :", modelInfo.InputSize)
+	fmt.Println("  Hidden Size:", modelInfo.HiddenSize)
+	fmt.Println("  Output Size:", modelInfo.OutputSize)
+	fmt.Println("  Total Parameters:", modelInfo.ParamSize())
+	fmt.Println("  Training Time:", formatDuration(modelInfo.TrainingTime))
+	fmt.Println("  Created At:", modelInfo.CreatedAt)
+	fmt.Println("  Updated At:", modelInfo.UpdatedAt)
 }

@@ -21,6 +21,27 @@ type NeuralNet struct {
 	learningRate  float64
 }
 
+type Metadata struct {
+	ContextSize int
+	Vocab       map[rune]int
+	Reverse     map[int]rune
+	ModelInfo   ModelInfo
+}
+
+type ModelInfo struct {
+	Name         string
+	InputSize    int
+	HiddenSize   int
+	OutputSize   int
+	TrainingTime float64 // TrainingTime in seconds
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+}
+
+func (mi ModelInfo) ParamSize() int {
+	return mi.InputSize*mi.HiddenSize + mi.HiddenSize + mi.HiddenSize*mi.OutputSize + mi.OutputSize
+}
+
 // NewNeuralNet initializes a new NeuralNet with random weights and biases.
 // The input, hidden, and output parameters specify the sizes of the respective layers.
 func NewNeuralNet(inputs, hidden, outputs int, learningRate float64) *NeuralNet {
@@ -69,7 +90,7 @@ func NewNeuralNet(inputs, hidden, outputs int, learningRate float64) *NeuralNet 
 }
 
 // Save saves the neural network's weights, biases, structure, and metadata to a file.
-func (nn *NeuralNet) Save(filename string, metadata interface{}) error {
+func (nn *NeuralNet) Save(filename string, metadata Metadata) error {
 	data := map[string]interface{}{
 		"inputs":        nn.inputs,
 		"hidden":        nn.hidden,
@@ -93,17 +114,17 @@ func (nn *NeuralNet) Save(filename string, metadata interface{}) error {
 }
 
 // LoadNeuralNet loads a neural network's weights, biases, structure, and metadata from a file.
-func LoadNeuralNet(filename string) (*NeuralNet, interface{}, error) {
+func LoadNeuralNet(filename string) (*NeuralNet, Metadata, error) {
 	file, err := os.Open(filename)
 	if err != nil {
-		return nil, nil, err
+		return nil, Metadata{}, err
 	}
 	defer file.Close()
 
 	var data map[string]interface{}
 	decoder := json.NewDecoder(file)
 	if err := decoder.Decode(&data); err != nil {
-		return nil, nil, err
+		return nil, Metadata{}, err
 	}
 
 	weightsInput := make([][]float64, len(data["weightsInput"].([]interface{})))
@@ -134,6 +155,18 @@ func LoadNeuralNet(filename string) (*NeuralNet, interface{}, error) {
 
 	metadataMap := data["metadata"].(map[string]interface{})
 
+	// Convert map[string]interface{} to JSON
+	metaBytes, err := json.Marshal(metadataMap)
+	if err != nil {
+		return nil, Metadata{}, err
+	}
+
+	// Decode JSON into strongly typed Metadata struct
+	var metadata Metadata
+	if err := json.Unmarshal(metaBytes, &metadata); err != nil {
+		return nil, Metadata{}, err
+	}
+
 	return &NeuralNet{
 		inputs:        int(data["inputs"].(float64)),
 		hidden:        int(data["hidden"].(float64)),
@@ -143,5 +176,5 @@ func LoadNeuralNet(filename string) (*NeuralNet, interface{}, error) {
 		biasHidden:    biasHidden,
 		biasOutput:    biasOutput,
 		learningRate:  data["learningRate"].(float64),
-	}, metadataMap, nil
+	}, metadata, nil
 }
