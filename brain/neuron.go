@@ -1,9 +1,8 @@
 package brain
 
 import (
-	"encoding/json"
+	"math"
 	"math/rand"
-	"os"
 	"time"
 )
 
@@ -19,27 +18,6 @@ type NeuralNet struct {
 	biasHidden    []float64
 	biasOutput    []float64
 	learningRate  float64
-}
-
-type Metadata struct {
-	ContextSize int
-	Vocab       map[rune]int
-	Reverse     map[int]rune
-	ModelInfo   ModelInfo
-}
-
-type ModelInfo struct {
-	Name         string
-	InputSize    int
-	HiddenSize   int
-	OutputSize   int
-	TrainingTime float64 // TrainingTime in seconds
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
-}
-
-func (mi ModelInfo) ParamSize() int {
-	return mi.InputSize*mi.HiddenSize + mi.HiddenSize + mi.HiddenSize*mi.OutputSize + mi.OutputSize
 }
 
 // NewNeuralNet initializes a new NeuralNet with random weights and biases.
@@ -89,92 +67,83 @@ func NewNeuralNet(inputs, hidden, outputs int, learningRate float64) *NeuralNet 
 	}
 }
 
-// Save saves the neural network's weights, biases, structure, and metadata to a file.
-func (nn *NeuralNet) Save(filename string, metadata Metadata) error {
-	data := map[string]interface{}{
-		"inputs":        nn.inputs,
-		"hidden":        nn.hidden,
-		"outputs":       nn.outputs,
-		"weightsInput":  nn.weightsInput,
-		"weightsHidden": nn.weightsHidden,
-		"biasHidden":    nn.biasHidden,
-		"biasOutput":    nn.biasOutput,
-		"learningRate":  nn.learningRate,
-		"metadata":      metadata,
-	}
-
-	file, err := os.Create(filename)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	encoder := json.NewEncoder(file)
-	return encoder.Encode(data)
+// Sigmoid activation function and its derivative
+// sigmoid computes the sigmoid activation function for a given input x.
+// The sigmoid function is defined as 1 / (1 + e^(-x)).
+func sigmoid(x float64) float64 {
+	return 1.0 / (1.0 + math.Exp(-x))
 }
 
-// LoadNeuralNet loads a neural network's weights, biases, structure, and metadata from a file.
-func LoadNeuralNet(filename string) (*NeuralNet, Metadata, error) {
-	file, err := os.Open(filename)
-	if err != nil {
-		return nil, Metadata{}, err
+// forward performs a forward pass through the neural network.
+// It computes the activations of the hidden and output layers for a given input x.
+func (nn *NeuralNet) Forward(input []float64) ([]float64, []float64) {
+	// Hidden layer
+	hiddenLayer := make([]float64, nn.hidden)
+	for i := 0; i < nn.hidden; i++ {
+		sum := nn.biasHidden[i]
+		for j := 0; j < nn.inputs; j++ {
+			sum += input[j] * nn.weightsInput[j][i]
+		}
+		hiddenLayer[i] = sigmoid(sum)
 	}
-	defer file.Close()
 
-	var data map[string]interface{}
-	decoder := json.NewDecoder(file)
-	if err := decoder.Decode(&data); err != nil {
-		return nil, Metadata{}, err
+	// Output layer
+	outputLayer := make([]float64, nn.outputs)
+	for i := 0; i < nn.outputs; i++ {
+		sum := nn.biasOutput[i]
+		for j := 0; j < nn.hidden; j++ {
+			sum += hiddenLayer[j] * nn.weightsHidden[j][i]
+		}
+		outputLayer[i] = sigmoid(sum)
 	}
 
-	weightsInput := make([][]float64, len(data["weightsInput"].([]interface{})))
-	for i, row := range data["weightsInput"].([]interface{}) {
-		weightsInput[i] = make([]float64, len(row.([]interface{})))
-		for j, val := range row.([]interface{}) {
-			weightsInput[i][j] = val.(float64)
+	return hiddenLayer, outputLayer
+}
+
+// sigmoidDerivative computes the derivative of the sigmoid function for a given input x.
+// This is used during backpropagation to calculate gradients.
+func sigmoidDerivative(x float64) float64 {
+	return x * (1.0 - x)
+}
+
+func (nn *NeuralNet) Backward(input, hiddenLayer, outputLayer, target []float64) {
+	// Calculate output layer error and delta
+	outputError := make([]float64, nn.outputs)
+	outputDelta := make([]float64, nn.outputs)
+	for i := 0; i < nn.outputs; i++ {
+		outputError[i] = target[i] - outputLayer[i]
+		outputDelta[i] = outputError[i] * sigmoidDerivative(outputLayer[i])
+	}
+
+	// Calculate hidden layer error and delta
+	hiddenError := make([]float64, nn.hidden)
+	hiddenDelta := make([]float64, nn.hidden)
+	for i := 0; i < nn.hidden; i++ {
+		sum := 0.0
+		for j := 0; j < nn.outputs; j++ {
+			sum += outputDelta[j] * nn.weightsHidden[i][j]
+		}
+		hiddenError[i] = sum
+		hiddenDelta[i] = hiddenError[i] * sigmoidDerivative(hiddenLayer[i])
+	}
+
+	// Update weights and biases for the output layer
+	for i := 0; i < nn.hidden; i++ {
+		for j := 0; j < nn.outputs; j++ {
+			nn.weightsHidden[i][j] += nn.learningRate * outputDelta[j] * hiddenLayer[i]
 		}
 	}
+	for i := 0; i < nn.outputs; i++ {
+		nn.biasOutput[i] += nn.learningRate * outputDelta[i]
+	}
 
-	weightsHidden := make([][]float64, len(data["weightsHidden"].([]interface{})))
-	for i, row := range data["weightsHidden"].([]interface{}) {
-		weightsHidden[i] = make([]float64, len(row.([]interface{})))
-		for j, val := range row.([]interface{}) {
-			weightsHidden[i][j] = val.(float64)
+	// Update weights and biases for the hidden layer
+	for i := 0; i < nn.inputs; i++ {
+		for j := 0; j < nn.hidden; j++ {
+			nn.weightsInput[i][j] += nn.learningRate * hiddenDelta[j] * input[i]
 		}
 	}
-
-	biasHidden := make([]float64, len(data["biasHidden"].([]interface{})))
-	for i, val := range data["biasHidden"].([]interface{}) {
-		biasHidden[i] = val.(float64)
+	for i := 0; i < nn.hidden; i++ {
+		nn.biasHidden[i] += nn.learningRate * hiddenDelta[i]
 	}
-
-	biasOutput := make([]float64, len(data["biasOutput"].([]interface{})))
-	for i, val := range data["biasOutput"].([]interface{}) {
-		biasOutput[i] = val.(float64)
-	}
-
-	metadataMap := data["metadata"].(map[string]interface{})
-
-	// Convert map[string]interface{} to JSON
-	metaBytes, err := json.Marshal(metadataMap)
-	if err != nil {
-		return nil, Metadata{}, err
-	}
-
-	// Decode JSON into strongly typed Metadata struct
-	var metadata Metadata
-	if err := json.Unmarshal(metaBytes, &metadata); err != nil {
-		return nil, Metadata{}, err
-	}
-
-	return &NeuralNet{
-		inputs:        int(data["inputs"].(float64)),
-		hidden:        int(data["hidden"].(float64)),
-		outputs:       int(data["outputs"].(float64)),
-		weightsInput:  weightsInput,
-		weightsHidden: weightsHidden,
-		biasHidden:    biasHidden,
-		biasOutput:    biasOutput,
-		learningRate:  data["learningRate"].(float64),
-	}, metadata, nil
 }

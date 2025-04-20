@@ -13,7 +13,7 @@ func Test() {
 	// generating()
 	// Test the neural network
 	X, Y := getXORData()
-	nn, metadata, _ := brain.LoadNeuralNet("./xor_model.bin")
+	nn, metadata, _ := brain.LoadModel("./xor_model.bin")
 	printModelInfo(metadata.ModelInfo)
 	fmt.Println("Test the neural network")
 	for i := 0; i < len(X); i++ {
@@ -52,7 +52,7 @@ func generating() {
 			TrainingTime: float64(time.Since(before).Seconds()),
 		},
 	}
-	nn.Save("./xor_model.bin", metadata)
+	brain.SaveModel("./xor_model.bin", nn, metadata)
 }
 
 func predictionToInt(prediction []float64) []float64 {

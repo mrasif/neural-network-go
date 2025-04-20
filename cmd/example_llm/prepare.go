@@ -8,20 +8,35 @@ type TrainingSample struct {
 	Target []float64
 }
 
-// Build vocabulary from text
-func BuildVocab(text string) (map[rune]int, map[int]rune) {
+// Build vocabulary from fixed text
+func BuildVocab() (map[rune]int, map[int]rune) {
 	vocab := map[rune]int{}
 	reverse := map[int]rune{}
 	id := 0
-	for _, ch := range text {
-		if _, ok := vocab[ch]; !ok {
-			vocab[ch] = id
-			reverse[id] = ch
+	for _, r := range "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 !@#$%^&*()-_=+[]{}|;:',.<>?/\\\n" {
+		if _, ok := vocab[r]; !ok {
+			vocab[r] = id
+			reverse[id] = r
 			id++
 		}
 	}
 	return vocab, reverse
 }
+
+// Build vocabulary from text
+// func BuildVocab(text string) (map[rune]int, map[int]rune) {
+// 	vocab := map[rune]int{}
+// 	reverse := map[int]rune{}
+// 	id := 0
+// 	for _, ch := range text {
+// 		if _, ok := vocab[ch]; !ok {
+// 			vocab[ch] = id
+// 			reverse[id] = ch
+// 			id++
+// 		}
+// 	}
+// 	return vocab, reverse
+// }
 
 // One-hot encode a rune
 func OneHotEncodeChar(ch rune, vocab map[rune]int, vocabSize int) []float64 {
@@ -42,9 +57,8 @@ func EncodeContext(context []rune, vocab map[rune]int, vocabSize int) []float64 
 }
 
 // Prepare sliding window dataset
-func PrepareTrainingPairs(text string, contextSize int) ([]TrainingSample, map[rune]int, map[int]rune) {
+func PrepareTrainingPairs(text string, contextSize int, vocab map[rune]int, reverse map[int]rune) []TrainingSample {
 	text = strings.TrimSpace(text)
-	vocab, reverse := BuildVocab(text)
 	vocabSize := len(vocab)
 	runes := []rune(text)
 
@@ -62,5 +76,5 @@ func PrepareTrainingPairs(text string, contextSize int) ([]TrainingSample, map[r
 		})
 	}
 
-	return samples, vocab, reverse
+	return samples
 }
