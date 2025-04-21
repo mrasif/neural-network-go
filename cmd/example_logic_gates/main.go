@@ -1,4 +1,4 @@
-package example_xor
+package example_logic_gates
 
 import (
 	"fmt"
@@ -9,11 +9,13 @@ import (
 
 func Test() {
 	fmt.Println("\n# Example with XOR Data:")
+	X, Y := getAndData()
+	filename := "./model_gate_and.bin"
+
 	// Initialize the neural network with 2 input neurons, 4 hidden neurons, and 1 output neuron
-	// generating()
+	// generateGateModel("AND", filename, X, Y)
 	// Test the neural network
-	X, Y := getXORData()
-	nn, metadata, _ := brain.LoadModel("./xor_model.bin")
+	nn, metadata, _ := brain.LoadModel(filename)
 	printModelInfo(metadata.ModelInfo)
 	fmt.Println("Test the neural network")
 	for i := 0; i < len(X); i++ {
@@ -23,14 +25,14 @@ func Test() {
 	}
 }
 
-func generating() {
+func generateGateModel(name string, filepath string, X, Y [][]float64) {
 	inputNeurons := 2
 	hiddenNeurons := 3
 	outputNeurons := 1
 	learningRate := 0.1
 	nn := brain.NewNeuralNet(inputNeurons, hiddenNeurons, outputNeurons, learningRate)
 
-	X, Y := getXORData()
+	// X, Y := getXORData()
 
 	// Train the neural network for 10,000 epochs with a learning rate of 0.1
 	fmt.Println("Training started...")
@@ -44,6 +46,7 @@ func generating() {
 	metadata := brain.Metadata{
 		ContextSize: 1,
 		ModelInfo: brain.ModelInfo{
+			Name:         name,
 			InputSize:    inputNeurons,
 			HiddenSize:   hiddenNeurons,
 			OutputSize:   outputNeurons,
@@ -52,7 +55,7 @@ func generating() {
 			TrainingTime: float64(time.Since(before).Seconds()),
 		},
 	}
-	brain.SaveModel("./xor_model.bin", nn, metadata)
+	brain.SaveModel(filepath, nn, metadata)
 }
 
 func predictionToInt(prediction []float64) []float64 {
@@ -64,23 +67,6 @@ func predictionToInt(prediction []float64) []float64 {
 		}
 	}
 	return prediction
-}
-
-func getXORData() ([][]float64, [][]float64) {
-	// Initialize data here
-	X := [][]float64{
-		{0, 0},
-		{0, 1},
-		{1, 0},
-		{1, 1},
-	}
-	Y := [][]float64{
-		{0},
-		{1},
-		{1},
-		{0},
-	}
-	return X, Y
 }
 
 func printModelInfo(modelInfo brain.ModelInfo) {
