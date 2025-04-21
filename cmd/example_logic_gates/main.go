@@ -8,7 +8,7 @@ import (
 )
 
 func Test() {
-	fmt.Println("\n# Example with XOR Data:")
+	fmt.Println("\n# Example with Logic Gate Data:")
 	X, Y := getAndData()
 	filename := "./model_gate_and.bin"
 
