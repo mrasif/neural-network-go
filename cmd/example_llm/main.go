@@ -19,12 +19,8 @@ func Test() {
 	nn, metadata := LoadModel(filePath)
 	printModelInfo(metadata)
 
-	// nn, metadata = TrainModel(nn, metadata)
-	// SaveModel(nn, filePath, metadata)
-
-	// fmt.Println("Vocab:", metadata.Vocab)
-	// fmt.Println("Reverse:", metadata.Reverse)
-	// metadata.ContextSize = 3
+	nn, metadata = TrainModel(nn, metadata)
+	SaveModel(nn, filePath, metadata)
 
 	// Step 4: Generate text
 	seed := "Once upon"
@@ -57,7 +53,7 @@ func CreateNewModel() (*brain.NeuralNet, brain.Metadata, error) {
 	hiddenSize := 256
 	outputSize := len(vocab)
 	learningRate := 0.001
-	nn := brain.NewNeuralNet(inputSize, hiddenSize, outputSize, learningRate, brain.NEURON_FUNCTION_TANH) // 64 hidden neurons
+	nn := brain.NewNeuralNet(inputSize, hiddenSize, outputSize, learningRate, brain.NEURON_FUNCTION_SIGMOID) // 64 hidden neurons
 
 	metadata := brain.Metadata{
 		Name:             "storybook",
@@ -102,6 +98,7 @@ func TrainModel(nn *brain.NeuralNet, metadata brain.Metadata) (*brain.NeuralNet,
 
 	// Print number of parameters
 	metadata.TrainingTime = time.Since(beforeTraining).Seconds()
+	metadata.Accuracy = accuracy
 	metadata.UpdatedAt = time.Now()
 	metadata.Epochs = metadata.Epochs + epochMax
 	return nn, metadata
@@ -129,6 +126,7 @@ func printModelInfo(metadata brain.Metadata) {
 	fmt.Println("  Output Neuron Size:", metadata.OutputNeuronSize)
 	fmt.Println("  Total Parameters:", metadata.ParamSize())
 	fmt.Println("  Epochs:", metadata.Epochs)
+	fmt.Printf("  Accuracy: %.2f%%\n", metadata.Accuracy*100)
 	fmt.Println("  Training Time:", formatDuration(metadata.TrainingTime))
 	fmt.Println("  Created At:", metadata.CreatedAt)
 	fmt.Println("  Updated At:", metadata.UpdatedAt)

@@ -12,6 +12,7 @@ type Metadata struct {
 	Reverse          map[int]rune
 	Epochs           int
 	TrainingTime     float64 // TrainingTime in seconds
+	Accuracy         float64 // Accuracy in percentage
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
 }
