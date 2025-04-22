@@ -3,6 +3,7 @@ package example_llm
 import (
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/mrasif/neural-network-go/brain"
@@ -23,9 +24,9 @@ func Test() {
 	SaveModel(nn, filePath, metadata)
 
 	// Step 4: Generate text
-	seed := "Once upon"
+	seed := "Hi"
 	generated := GenerateText(nn, seed, 100, metadata.ContextSize, metadata.Vocab, metadata.Reverse)
-	fmt.Println("Generated:", generated)
+	fmt.Println("Generated:", strings.TrimSpace(generated))
 }
 
 func LoadModel(filePath string) (*brain.NeuralNet, brain.Metadata) {

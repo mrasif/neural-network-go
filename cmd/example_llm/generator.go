@@ -68,7 +68,9 @@ func softmaxWithTemperature(output []float64, temp float64) []float64 {
 // Generate text based on seed
 func GenerateText(nn *brain.NeuralNet, seed string, length int, contextSize int, vocab map[rune]int, reverse map[int]rune) string {
 	if len(seed) < contextSize {
-		return "Seed text too short for context size"
+		// return "Seed text too short for context size"
+		pad := strings.Repeat(" ", contextSize-len(seed))
+		seed = pad + seed
 	}
 
 	runes := []rune(seed)
