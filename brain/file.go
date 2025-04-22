@@ -16,6 +16,7 @@ func SaveModel(filename string, nn *NeuralNet, metadata Metadata) error {
 		"biasHidden":    nn.biasHidden,
 		"biasOutput":    nn.biasOutput,
 		"learningRate":  nn.learningRate,
+		"fn":            nn.fn,
 		"metadata":      metadata,
 	}
 
@@ -83,7 +84,7 @@ func LoadModel(filename string) (*NeuralNet, Metadata, error) {
 		return nil, Metadata{}, err
 	}
 
-	return &NeuralNet{
+	nn := &NeuralNet{
 		inputs:        int(data["inputs"].(float64)),
 		hidden:        int(data["hidden"].(float64)),
 		outputs:       int(data["outputs"].(float64)),
@@ -92,5 +93,10 @@ func LoadModel(filename string) (*NeuralNet, Metadata, error) {
 		biasHidden:    biasHidden,
 		biasOutput:    biasOutput,
 		learningRate:  data["learningRate"].(float64),
-	}, metadata, nil
+		fn:            data["fn"].(string),
+	}
+
+	nn.LoadFn()
+
+	return nn, metadata, nil
 }

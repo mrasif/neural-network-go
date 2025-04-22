@@ -18,11 +18,14 @@ type NeuralNet struct {
 	biasHidden    []float64
 	biasOutput    []float64
 	learningRate  float64
+	fn            string
+	Activation    func(float64) float64
+	Derivative    func(float64) float64
 }
 
 // NewNeuralNet initializes a new NeuralNet with random weights and biases.
 // The input, hidden, and output parameters specify the sizes of the respective layers.
-func NewNeuralNet(inputs, hidden, outputs int, learningRate float64) *NeuralNet {
+func NewNeuralNet(inputs, hidden, outputs int, learningRate float64, fn string) *NeuralNet {
 	rand.New(rand.NewSource(time.Now().UnixNano())) // Use rand.New with a new source for better practice
 	// Initialize weights and biases with random values
 	weightsInput := make([][]float64, inputs)
@@ -55,7 +58,7 @@ func NewNeuralNet(inputs, hidden, outputs int, learningRate float64) *NeuralNet 
 		biasOutput[i] = rand.Float64()*0.2 - 0.1
 	}
 
-	return &NeuralNet{
+	nn := &NeuralNet{
 		inputs:        inputs,
 		hidden:        hidden,
 		outputs:       outputs,
@@ -64,14 +67,46 @@ func NewNeuralNet(inputs, hidden, outputs int, learningRate float64) *NeuralNet 
 		biasHidden:    biasHidden,
 		biasOutput:    biasOutput,
 		learningRate:  learningRate,
+		fn:            fn,
 	}
+	nn.LoadFn()
+	return nn
 }
 
 // Sigmoid activation function and its derivative
 // sigmoid computes the sigmoid activation function for a given input x.
 // The sigmoid function is defined as 1 / (1 + e^(-x)).
-func sigmoid(x float64) float64 {
+func Sigmoid(x float64) float64 {
 	return 1.0 / (1.0 + math.Exp(-x))
+}
+
+// sigmoidDerivative computes the derivative of the sigmoid function for a given input x.
+// This is used during backpropagation to calculate gradients.
+func SigmoidDerivative(x float64) float64 {
+	return x * (1.0 - x)
+}
+
+func Tanh(x float64) float64 {
+	return math.Tanh(x)
+}
+
+func TanhDerivative(x float64) float64 {
+	tanh := math.Tanh(x)
+	return 1.0 - tanh*tanh
+}
+
+func (nn *NeuralNet) LoadFn() {
+	switch nn.fn {
+	case NEURON_FUNCTION_SIGMOID:
+		nn.Activation = Sigmoid
+		nn.Derivative = SigmoidDerivative
+	case NEURON_FUNCTION_TANH:
+		nn.Activation = Tanh
+		nn.Derivative = TanhDerivative
+	default:
+		nn.Activation = Sigmoid
+		nn.Derivative = SigmoidDerivative
+	}
 }
 
 // forward performs a forward pass through the neural network.
@@ -84,7 +119,7 @@ func (nn *NeuralNet) Forward(input []float64) ([]float64, []float64) {
 		for j := 0; j < nn.inputs; j++ {
 			sum += input[j] * nn.weightsInput[j][i]
 		}
-		hiddenLayer[i] = sigmoid(sum)
+		hiddenLayer[i] = nn.Activation(sum)
 	}
 
 	// Output layer
@@ -94,16 +129,10 @@ func (nn *NeuralNet) Forward(input []float64) ([]float64, []float64) {
 		for j := 0; j < nn.hidden; j++ {
 			sum += hiddenLayer[j] * nn.weightsHidden[j][i]
 		}
-		outputLayer[i] = sigmoid(sum)
+		outputLayer[i] = nn.Activation(sum)
 	}
 
 	return hiddenLayer, outputLayer
-}
-
-// sigmoidDerivative computes the derivative of the sigmoid function for a given input x.
-// This is used during backpropagation to calculate gradients.
-func sigmoidDerivative(x float64) float64 {
-	return x * (1.0 - x)
 }
 
 func (nn *NeuralNet) Backward(input, hiddenLayer, outputLayer, target []float64) {
@@ -112,7 +141,7 @@ func (nn *NeuralNet) Backward(input, hiddenLayer, outputLayer, target []float64)
 	outputDelta := make([]float64, nn.outputs)
 	for i := 0; i < nn.outputs; i++ {
 		outputError[i] = target[i] - outputLayer[i]
-		outputDelta[i] = outputError[i] * sigmoidDerivative(outputLayer[i])
+		outputDelta[i] = outputError[i] * nn.Derivative(outputLayer[i])
 	}
 
 	// Calculate hidden layer error and delta
@@ -124,7 +153,7 @@ func (nn *NeuralNet) Backward(input, hiddenLayer, outputLayer, target []float64)
 			sum += outputDelta[j] * nn.weightsHidden[i][j]
 		}
 		hiddenError[i] = sum
-		hiddenDelta[i] = hiddenError[i] * sigmoidDerivative(hiddenLayer[i])
+		hiddenDelta[i] = hiddenError[i] * nn.Derivative(hiddenLayer[i])
 	}
 
 	// Update weights and biases for the output layer

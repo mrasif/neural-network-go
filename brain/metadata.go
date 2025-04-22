@@ -3,22 +3,19 @@ package brain
 import "time"
 
 type Metadata struct {
-	ContextSize int
-	Vocab       map[rune]int
-	Reverse     map[int]rune
-	ModelInfo   ModelInfo
+	Name             string
+	ContextSize      int
+	InputNeuronSize  int
+	HiddenNeuronSize int
+	OutputNeuronSize int
+	Vocab            map[rune]int
+	Reverse          map[int]rune
+	Epochs           int
+	TrainingTime     float64 // TrainingTime in seconds
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
 }
 
-type ModelInfo struct {
-	Name         string
-	InputSize    int
-	HiddenSize   int
-	OutputSize   int
-	TrainingTime float64 // TrainingTime in seconds
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
-}
-
-func (mi ModelInfo) ParamSize() int {
-	return mi.InputSize*mi.HiddenSize + mi.HiddenSize + mi.HiddenSize*mi.OutputSize + mi.OutputSize
+func (m Metadata) ParamSize() int {
+	return m.InputNeuronSize*m.HiddenNeuronSize + m.HiddenNeuronSize + m.HiddenNeuronSize*m.OutputNeuronSize + m.OutputNeuronSize
 }

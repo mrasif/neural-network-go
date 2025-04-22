@@ -14,21 +14,14 @@ func Test() {
 	// if err != nil {
 	// 	log.Fatal(err)
 	// }
-
-	// err = SaveModel(nn, filePath, metadata)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
+	// SaveModel(nn, filePath, metadata)
 
 	nn, metadata := LoadModel(filePath)
+	printModelInfo(metadata)
 
-	nn, metadata = TrainModel(nn, metadata)
-	err := SaveModel(nn, filePath, metadata)
-	if err != nil {
-		log.Fatal(err)
-	}
+	// nn, metadata = TrainModel(nn, metadata)
+	// SaveModel(nn, filePath, metadata)
 
-	printModelInfo(metadata.ModelInfo)
 	// fmt.Println("Vocab:", metadata.Vocab)
 	// fmt.Println("Reverse:", metadata.Reverse)
 	// metadata.ContextSize = 3
@@ -63,20 +56,18 @@ func CreateNewModel() (*brain.NeuralNet, brain.Metadata, error) {
 	inputSize := len(vocab) * contextSize
 	hiddenSize := 256
 	outputSize := len(vocab)
-	learningRate := 0.01
-	nn := brain.NewNeuralNet(inputSize, hiddenSize, outputSize, learningRate) // 64 hidden neurons
+	learningRate := 0.001
+	nn := brain.NewNeuralNet(inputSize, hiddenSize, outputSize, learningRate, brain.NEURON_FUNCTION_TANH) // 64 hidden neurons
 
 	metadata := brain.Metadata{
-		ContextSize: contextSize,
-		Vocab:       vocab,
-		Reverse:     reverse,
-		ModelInfo: brain.ModelInfo{
-			Name:       "storybook",
-			InputSize:  inputSize,
-			HiddenSize: hiddenSize,
-			OutputSize: outputSize,
-			CreatedAt:  time.Now(),
-		},
+		Name:             "storybook",
+		ContextSize:      contextSize,
+		InputNeuronSize:  inputSize,
+		HiddenNeuronSize: hiddenSize,
+		OutputNeuronSize: outputSize,
+		Vocab:            vocab,
+		Reverse:          reverse,
+		CreatedAt:        time.Now(),
 	}
 
 	return nn, metadata, nil
@@ -91,21 +82,28 @@ func TrainModel(nn *brain.NeuralNet, metadata brain.Metadata) (*brain.NeuralNet,
 
 	// Step 3: Train
 	beforeTraining := time.Now()
-	fmt.Printf("\rTraining Progress: 0.00%% [0s]")
+	var accuracy float64
+	fmt.Printf("\rTraining Progress: 0.00%% [0s], Accuracy: 0.00%%")
 	progress := 0.0
-	epochMax := 100
+	epochMax := 10
+	currect, total := 0.0, 0.0
 	for epoch := 0; epoch < epochMax; epoch++ {
 		for _, sample := range samples {
-			nn.Train(sample.Input, sample.Target)
+			c, t := nn.Train(sample.Input, sample.Target)
+			currect += c
+			total += t
+			accuracy = currect / total
+			fmt.Printf("\rTraining Progress: %.2f%% [%s], Accuracy: %.2f%%  ", progress*100, formatDuration(time.Since(beforeTraining).Seconds()), accuracy*100)
 		}
 		progress += 1.0 / float64(epochMax)
-		fmt.Printf("\rTraining Progress: %.2f%% [%s]", progress*100, formatDuration(time.Since(beforeTraining).Seconds()))
+		// fmt.Printf("\rTraining Progress: %.2f%% [%s]", progress*100, formatDuration(time.Since(beforeTraining).Seconds()))
 	}
-	fmt.Printf("\rTraining Progress: 100.00%% [%s]\n", formatDuration(time.Since(beforeTraining).Seconds())) // Final update + newline
+	fmt.Printf("\rTraining Progress: 100.00%% [%s], Accuracy: %.2f%%  \n", formatDuration(time.Since(beforeTraining).Seconds()), accuracy*100) // Final update + newline
 
 	// Print number of parameters
-	metadata.ModelInfo.TrainingTime = time.Since(beforeTraining).Seconds()
-	metadata.ModelInfo.UpdatedAt = time.Now()
+	metadata.TrainingTime = time.Since(beforeTraining).Seconds()
+	metadata.UpdatedAt = time.Now()
+	metadata.Epochs = metadata.Epochs + epochMax
 	return nn, metadata
 }
 
@@ -122,14 +120,16 @@ func formatDuration(seconds float64) string {
 	return fmt.Sprintf("%ds", remainingSeconds)
 }
 
-func printModelInfo(modelInfo brain.ModelInfo) {
+func printModelInfo(metadata brain.Metadata) {
 	fmt.Println("Model Architecture:")
-	fmt.Println("  Name:", modelInfo.Name)
-	fmt.Println("  Input Size :", modelInfo.InputSize)
-	fmt.Println("  Hidden Size:", modelInfo.HiddenSize)
-	fmt.Println("  Output Size:", modelInfo.OutputSize)
-	fmt.Println("  Total Parameters:", modelInfo.ParamSize())
-	fmt.Println("  Training Time:", formatDuration(modelInfo.TrainingTime))
-	fmt.Println("  Created At:", modelInfo.CreatedAt)
-	fmt.Println("  Updated At:", modelInfo.UpdatedAt)
+	fmt.Println("  Name:", metadata.Name)
+	fmt.Println("  Context Size:", metadata.ContextSize)
+	fmt.Println("  Input Neuron Size :", metadata.InputNeuronSize)
+	fmt.Println("  Hidden Neuron Size:", metadata.HiddenNeuronSize)
+	fmt.Println("  Output Neuron Size:", metadata.OutputNeuronSize)
+	fmt.Println("  Total Parameters:", metadata.ParamSize())
+	fmt.Println("  Epochs:", metadata.Epochs)
+	fmt.Println("  Training Time:", formatDuration(metadata.TrainingTime))
+	fmt.Println("  Created At:", metadata.CreatedAt)
+	fmt.Println("  Updated At:", metadata.UpdatedAt)
 }

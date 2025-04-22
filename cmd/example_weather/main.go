@@ -14,7 +14,7 @@ func Test() {
 	hiddenNeurons := 4
 	outputNeurons := 1
 	learningRate := 0.1
-	nn := brain.NewNeuralNet(inputNeurons, hiddenNeurons, outputNeurons, learningRate)
+	nn := brain.NewNeuralNet(inputNeurons, hiddenNeurons, outputNeurons, learningRate, brain.NEURON_FUNCTION_SIGMOID)
 
 	X, Y := getHistoricalWeatherData()
 
