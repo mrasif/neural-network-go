@@ -3,3 +3,6 @@ neural-network
 
 # model
 *.bin
+
+# Directory
+ai_models/

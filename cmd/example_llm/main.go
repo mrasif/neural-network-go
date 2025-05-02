@@ -13,18 +13,18 @@ func Test() {
 	filePath := "./model.bin"
 	// nn, metadata, err := CreateNewModel()
 	// if err != nil {
-	// 	log.Fatal(err)
+	// log.Fatal(err)
 	// }
 	// SaveModel(nn, filePath, metadata)
 
 	nn, metadata := LoadModel(filePath)
 	printModelInfo(metadata)
 
-	nn, metadata = TrainModel(nn, metadata)
-	SaveModel(nn, filePath, metadata)
+	//nn, metadata = TrainModel(nn, metadata)
+	//SaveModel(nn, filePath, metadata)
 
 	// Step 4: Generate text
-	seed := "Hi"
+	seed := "There is "
 	generated := GenerateText(nn, seed, 100, metadata.ContextSize, metadata.Vocab, metadata.Reverse)
 	fmt.Println("Generated:", strings.TrimSpace(generated))
 }
@@ -49,7 +49,7 @@ func SaveModel(nn *brain.NeuralNet, filePath string, metadata brain.Metadata) er
 
 func CreateNewModel() (*brain.NeuralNet, brain.Metadata, error) {
 	vocab, reverse := BuildVocab()
-	contextSize := 6
+	contextSize := 16
 	inputSize := len(vocab) * contextSize
 	hiddenSize := 256
 	outputSize := len(vocab)
