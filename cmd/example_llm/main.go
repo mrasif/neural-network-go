@@ -3,6 +3,7 @@ package example_llm
 import (
 	"fmt"
 	"log"
+	"os"
 	"strings"
 	"time"
 
@@ -21,7 +22,6 @@ func createNew(filePath string) {
 func trainExisting(filePath string) {
 	nn, metadata := LoadModel(filePath)
 	printModelInfo(metadata)
-
 	nn, metadata = TrainModel(nn, metadata)
 	SaveModel(nn, filePath, metadata)
 	printModelInfo(metadata)
@@ -30,7 +30,6 @@ func trainExisting(filePath string) {
 func predictText(filePath string) {
 	nn, metadata := LoadModel(filePath)
 	printModelInfo(metadata)
-
 	// Step 4: Generate text
 	seed := "There is "
 	generated := GenerateText(nn, seed, 100, metadata.ContextSize, metadata.Vocab, metadata.Reverse)
@@ -39,7 +38,20 @@ func predictText(filePath string) {
 
 func Test() {
 	filePath := "./ai_models/model.bin"
-	// createNew(filePath)
+
+	basePath := filePath[:strings.LastIndex(filePath, "/")]
+	if _, err := os.Stat(basePath); os.IsNotExist(err) {
+		if err := os.Mkdir(basePath, os.ModePerm); err != nil {
+			log.Fatalf("Failed to create directory %s: %v", basePath, err)
+		}
+		fmt.Println("Directory created: ", basePath)
+	}
+
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		createNew(filePath)
+		fmt.Println("Model created: ", filePath)
+	}
+
 	trainExisting(filePath)
 	predictText(filePath)
 }
