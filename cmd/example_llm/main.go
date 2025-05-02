@@ -9,24 +9,39 @@ import (
 	"github.com/mrasif/neural-network-go/brain"
 )
 
-func Test() {
-	filePath := "./model.bin"
-	// nn, metadata, err := CreateNewModel()
-	// if err != nil {
-	// log.Fatal(err)
-	// }
-	// SaveModel(nn, filePath, metadata)
+func createNew(filePath string) {
+	nn, metadata, err := CreateNewModel()
+	if err != nil {
+		log.Fatal(err)
+	}
+	SaveModel(nn, filePath, metadata)
+	printModelInfo(metadata)
+}
 
+func trainExisting(filePath string) {
 	nn, metadata := LoadModel(filePath)
 	printModelInfo(metadata)
 
-	//nn, metadata = TrainModel(nn, metadata)
-	//SaveModel(nn, filePath, metadata)
+	nn, metadata = TrainModel(nn, metadata)
+	SaveModel(nn, filePath, metadata)
+	printModelInfo(metadata)
+}
+
+func predictText(filePath string) {
+	nn, metadata := LoadModel(filePath)
+	printModelInfo(metadata)
 
 	// Step 4: Generate text
 	seed := "There is "
 	generated := GenerateText(nn, seed, 100, metadata.ContextSize, metadata.Vocab, metadata.Reverse)
 	fmt.Println("Generated:", strings.TrimSpace(generated))
+}
+
+func Test() {
+	filePath := "./ai_models/model.bin"
+	// createNew(filePath)
+	trainExisting(filePath)
+	predictText(filePath)
 }
 
 func LoadModel(filePath string) (*brain.NeuralNet, brain.Metadata) {
@@ -48,7 +63,8 @@ func SaveModel(nn *brain.NeuralNet, filePath string, metadata brain.Metadata) er
 }
 
 func CreateNewModel() (*brain.NeuralNet, brain.Metadata, error) {
-	vocab, reverse := BuildVocab()
+	data, _ := getTrainingData()
+	vocab, reverse := BuildVocab(data)
 	contextSize := 16
 	inputSize := len(vocab) * contextSize
 	hiddenSize := 256
@@ -98,7 +114,7 @@ func TrainModel(nn *brain.NeuralNet, metadata brain.Metadata) (*brain.NeuralNet,
 	fmt.Printf("\rTraining Progress: 100.00%% [%s], Accuracy: %.2f%%  \n", formatDuration(time.Since(beforeTraining).Seconds()), accuracy*100) // Final update + newline
 
 	// Print number of parameters
-	metadata.TrainingTime = time.Since(beforeTraining).Seconds()
+	metadata.TrainingTime = metadata.TrainingTime + time.Since(beforeTraining).Seconds()
 	metadata.Accuracy = accuracy
 	metadata.UpdatedAt = time.Now()
 	metadata.Epochs = metadata.Epochs + epochMax

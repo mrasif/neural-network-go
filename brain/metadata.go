@@ -8,8 +8,8 @@ type Metadata struct {
 	InputNeuronSize  int
 	HiddenNeuronSize int
 	OutputNeuronSize int
-	Vocab            map[rune]int
-	Reverse          map[int]rune
+	Vocab            map[string]int
+	Reverse          map[int]string
 	Epochs           int
 	TrainingTime     float64 // TrainingTime in seconds
 	Accuracy         float64 // Accuracy in percentage
