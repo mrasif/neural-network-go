@@ -100,15 +100,17 @@ func TrainModel(nn *brain.NeuralNet, metadata brain.Metadata) (*brain.NeuralNet,
 	progress := 0.0
 	epochMax := 10
 	currect, total := 0.0, 0.0
+	sampleLength := len(samples)
 	for epoch := 0; epoch < epochMax; epoch++ {
 		for _, sample := range samples {
 			c, t := nn.Train(sample.Input, sample.Target)
 			currect += c
 			total += t
 			accuracy = currect / total
+			progress += 1.0 / float64(epochMax*sampleLength)
 			fmt.Printf("\rTraining Progress: %.2f%% [%s], Accuracy: %.2f%%  ", progress*100, formatDuration(time.Since(beforeTraining).Seconds()), accuracy*100)
 		}
-		progress += 1.0 / float64(epochMax)
+		// progress += 1.0 / float64(epochMax)
 		// fmt.Printf("\rTraining Progress: %.2f%% [%s]", progress*100, formatDuration(time.Since(beforeTraining).Seconds()))
 	}
 	fmt.Printf("\rTraining Progress: 100.00%% [%s], Accuracy: %.2f%%  \n", formatDuration(time.Since(beforeTraining).Seconds()), accuracy*100) // Final update + newline
