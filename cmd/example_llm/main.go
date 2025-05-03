@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/mrasif/neural-network-go/brain"
@@ -100,38 +101,68 @@ func CreateNewModel() (*brain.NeuralNet, brain.Metadata, error) {
 
 func TrainModel(nn *brain.NeuralNet, metadata brain.Metadata) (*brain.NeuralNet, brain.Metadata) {
 	text, length := getTrainingData()
-	fmt.Println("Training Data Word count: ", length)
+	fmt.Println("Training Data Word count:", length)
 
 	// Step 1: Prepare dataset
 	samples := PrepareTrainingPairs(text, metadata.ContextSize, metadata.Vocab, metadata.Reverse)
 
-	// Step 3: Train
+	// Step 2: Train
 	beforeTraining := time.Now()
-	var accuracy float64
 	fmt.Printf("\rTraining Progress: 0.00%% [0s], Accuracy: 0.00%%")
 	progress := 0.0
 	epochMax := 10
-	currect, total := 0.0, 0.0
 	sampleLength := len(samples)
-	for epoch := 0; epoch < epochMax; epoch++ {
-		for _, sample := range samples {
-			c, t := nn.Train(sample.Input, sample.Target)
-			currect += c
-			total += t
-			accuracy = currect / total
-			progress += 1.0 / float64(epochMax*sampleLength)
-			fmt.Printf("\rTraining Progress: %.2f%% [%s], Accuracy: %.2f%%  ", progress*100, formatDuration(time.Since(beforeTraining).Seconds()), accuracy*100)
-		}
-		// progress += 1.0 / float64(epochMax)
-		// fmt.Printf("\rTraining Progress: %.2f%% [%s]", progress*100, formatDuration(time.Since(beforeTraining).Seconds()))
-	}
-	fmt.Printf("\rTraining Progress: 100.00%% [%s], Accuracy: %.2f%%  \n", formatDuration(time.Since(beforeTraining).Seconds()), accuracy*100) // Final update + newline
+	batchSize := 32 // change this based on your CPU core count
 
-	// Print number of parameters
-	metadata.TrainingTime = metadata.TrainingTime + time.Since(beforeTraining).Seconds()
+	for epoch := 0; epoch < epochMax; epoch++ {
+		currect, total := 0.0, 0.0
+
+		for i := 0; i < sampleLength; i += batchSize {
+			end := i + batchSize
+			if end > sampleLength {
+				end = sampleLength
+			}
+			batch := samples[i:end]
+
+			var wg sync.WaitGroup
+			type result struct{ correct, total float64 }
+			results := make(chan result, len(batch))
+
+			for _, sample := range batch {
+				wg.Add(1)
+				go func(s TrainingSample) {
+					defer wg.Done()
+					c, t := nn.Train(s.Input, s.Target) // note: not thread-safe!
+					results <- result{c, t}
+				}(sample)
+			}
+
+			wg.Wait()
+			close(results)
+
+			for r := range results {
+				currect += r.correct
+				total += r.total
+			}
+
+			progress += float64(len(batch)) / float64(epochMax*sampleLength)
+			accuracy := currect / total
+			fmt.Printf("\rTraining Progress: %.2f%% [%s], Accuracy: %.2f%%", progress*100, formatDuration(time.Since(beforeTraining).Seconds()), accuracy*100)
+		}
+	}
+
+	// Final update
+	accuracy := float64(metadata.Accuracy)
+	if sampleLength > 0 {
+		accuracy = float64(metadata.Accuracy)
+	}
+	fmt.Printf("\rTraining Progress: 100.00%% [%s], Accuracy: %.2f%%\n", formatDuration(time.Since(beforeTraining).Seconds()), accuracy*100)
+
+	// Update metadata
+	metadata.TrainingTime += time.Since(beforeTraining).Seconds()
 	metadata.Accuracy = accuracy
 	metadata.UpdatedAt = time.Now()
-	metadata.Epochs = metadata.Epochs + epochMax
+	metadata.Epochs += epochMax
 	return nn, metadata
 }
 
